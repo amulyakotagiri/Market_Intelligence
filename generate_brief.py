@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Money Intelligence System – Daily Brief (V1)
-Free • India-focused • Rule-based significance filter
+Money Intelligence System – Daily Brief (V1.1)
+Free • India-focused • Better context for investigation
 """
 
 from datetime import datetime
@@ -50,13 +50,17 @@ def build_brief(indices):
     nifty = indices.get("NIFTY 50", {})
     vix = indices.get("INDIA VIX", {})
     nifty_chg = nifty.get("pchange", 0.0)
+    vix_level = vix.get("last", 0.0)
+    vix_chg = vix.get("pchange", 0.0)
 
-    lines.append("Market")
+    # === Market Snapshot ===
+    lines.append("Market Snapshot")
     lines.append(f"Nifty 50: {nifty_chg:+.2f}%")
     if vix:
-        lines.append(f"India VIX: {vix.get('last', 0):.2f} ({vix.get('pchange', 0):+.1f}%)")
+        lines.append(f"India VIX: {vix_level:.2f} ({vix_chg:+.1f}%)")
     lines.append("")
 
+    # === Sector Moves ===
     notable = []
     for full, short in SECTORS.items():
         sec = indices.get(full)
@@ -67,29 +71,43 @@ def build_brief(indices):
         if abs(rel) >= REL_THRESHOLD:
             notable.append((short, rel, chg))
 
-    lines.append("Notable moves (vs Nifty)")
+    lines.append("Notable Sector Moves (vs Nifty)")
     if notable:
         for short, rel, chg in sorted(notable, key=lambda x: abs(x[1]), reverse=True):
             direction = "outperformed" if rel > 0 else "underperformed"
-            lines.append(f"{short}: {chg:+.2f}% (rel {rel:+.2f}%) → {direction}")
+            lines.append(f"• {short}: {chg:+.2f}% (rel {rel:+.2f}%) → {direction}")
     else:
-        lines.append("None ≥ 1.3% relative")
+        lines.append("• None ≥ 1.3% relative")
+        lines.append("→ Low dispersion day (sectors moved together)")
     lines.append("")
 
+    # === Context & Reading ===
+    lines.append("Context")
+    if abs(nifty_chg) < 0.5 and not notable:
+        lines.append("Quiet / low-conviction day.")
+    elif nifty_chg > 0 and vix_chg < -2:
+        lines.append("Mild rise + falling VIX → fear cooling.")
+    elif nifty_chg < -1:
+        lines.append("Sharp decline day.")
+    else:
+        lines.append("Mixed / normal day.")
+    lines.append("")
+
+    # === Investigation Prompt ===
+    lines.append("Investigation")
     if notable:
-        lines.append("Investigation prompts")
-        for i, (short, rel, _) in enumerate(notable[:2], 1):
-            lines.append(
-                f"{i}. {short} moved meaningfully. "
-                "What happened? Why? Who benefits? Who gets hurt? "
-                "Temporary or structural? What evidence could prove my thesis wrong?"
-            )
+        top = notable[0]
+        lines.append(f"Why did {top[0]} {'outperform' if top[1] > 0 else 'underperform'} so clearly?")
     else:
-        lines.append("No strong sector signals today.")
-
+        lines.append("Why was today a low-dispersion day?")
+        lines.append("What is the market waiting for?")
     lines.append("")
-    lines.append("Sources: NSE")
-    lines.append("You form the hypothesis.")
+    lines.append("Ask yourself:")
+    lines.append("What happened? → Why? → Who benefits/hurts?")
+    lines.append("Temporary or structural? → What would prove me wrong?")
+    lines.append("")
+    lines.append("Sources: NSE | You form the hypothesis.")
+
     return "\n".join(lines)
 
 def main():
