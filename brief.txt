@@ -1,13 +1,22 @@
 Money Brief | 26 Sep 2026
 
-Market
+Market Snapshot
 Nifty 50: +0.34%
 India VIX: 12.18 (-4.0%)
 
-Notable moves (vs Nifty)
-None ≥ 1.3% relative
+Notable Sector Moves (vs Nifty)
+• None ≥ 1.3% relative
+→ Low dispersion day (sectors moved together)
 
-No strong sector signals today.
+Context
+Quiet / low-conviction day.
 
-Sources: NSE
-You form the hypothesis.
+Investigation
+Why was today a low-dispersion day?
+What is the market waiting for?
+
+Ask yourself:
+What happened? → Why? → Who benefits/hurts?
+Temporary or structural? → What would prove me wrong?
+
+Sources: NSE | You form the hypothesis.
