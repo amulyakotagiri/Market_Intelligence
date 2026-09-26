@@ -1,0 +1,36 @@
+name: Daily Money Brief
+
+on:
+  schedule:
+    # 09:00 IST every weekday (03:30 UTC)
+    - cron: '30 3 * * 1-5'
+  workflow_dispatch:   # allows manual testing
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install jugaad-data requests
+
+      - name: Generate Money Brief
+        run: python generate_brief.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add brief.txt
+          git diff --quiet && git diff --staged --quiet || git commit -m "Money Brief $(date +%Y-%m-%d)"
+          git push
