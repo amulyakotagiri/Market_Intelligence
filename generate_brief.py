@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Money Intelligence System – Daily Brief (V1.1)
-Free • India-focused • Better context for investigation
+Money Intelligence System – Daily Brief (Real News V1.3)
+Short • Live headlines • Fits 4x4 widget • Free
 """
 
 from datetime import datetime
 from jugaad_data.nse import NSELive
+import feedparser
 import traceback
 
 SECTORS = {
@@ -20,7 +21,13 @@ SECTORS = {
     "NIFTY FINANCIAL SERVICES": "Financials",
 }
 
-REL_THRESHOLD = 1.3  # relative move vs Nifty to trigger investigation
+REL_THRESHOLD = 1.3
+
+# Free RSS feeds (Moneycontrol)
+RSS_FEEDS = [
+    "https://www.moneycontrol.com/rss/latestnews.xml",
+    "https://www.moneycontrol.com/rss/marketreports.xml",
+]
 
 def safe_float(v, default=0.0):
     try:
@@ -43,6 +50,35 @@ def get_indices(nse):
         print("Index fetch error:", e)
         return {}
 
+def get_top_headlines(max_items=2):
+    """Fetch top market-related headlines from free RSS"""
+    headlines = []
+    keywords = ["bank", "strike", "nifty", "sensex", "rbi", "crude", "yield", "fii", "market", "rate"]
+
+    for url in RSS_FEEDS:
+        try:
+            feed = feedparser.parse(url)
+            for entry in feed.entries[:8]:
+                title = entry.get("title", "").strip()
+                if not title:
+                    continue
+                # Prefer market-related headlines
+                if any(k in title.lower() for k in keywords):
+                    # Keep it short
+                    short = title[:70] + "..." if len(title) > 70 else title
+                    if short not in headlines:
+                        headlines.append(short)
+                if len(headlines) >= max_items:
+                    return headlines
+        except Exception as e:
+            print(f"RSS error ({url}):", e)
+            continue
+
+    # Fallback if no good headlines found
+    if not headlines:
+        headlines = ["No major market headlines fetched"]
+    return headlines[:max_items]
+
 def build_brief(indices):
     today = datetime.now().strftime("%d %b %Y")
     lines = [f"Money Brief | {today}", ""]
@@ -53,14 +89,10 @@ def build_brief(indices):
     vix_level = vix.get("last", 0.0)
     vix_chg = vix.get("pchange", 0.0)
 
-    # === Market Snapshot ===
-    lines.append("Market Snapshot")
-    lines.append(f"Nifty 50: {nifty_chg:+.2f}%")
-    if vix:
-        lines.append(f"India VIX: {vix_level:.2f} ({vix_chg:+.1f}%)")
-    lines.append("")
+    # Compact market line
+    lines.append(f"Nifty {nifty_chg:+.2f}% | VIX {vix_level:.2f} ({vix_chg:+.1f}%)")
 
-    # === Sector Moves ===
+    # Sector dispersion
     notable = []
     for full, short in SECTORS.items():
         sec = indices.get(full)
@@ -69,44 +101,22 @@ def build_brief(indices):
         chg = sec["pchange"]
         rel = chg - nifty_chg
         if abs(rel) >= REL_THRESHOLD:
-            notable.append((short, rel, chg))
+            notable.append(f"{short} {rel:+.1f}%")
 
-    lines.append("Notable Sector Moves (vs Nifty)")
     if notable:
-        for short, rel, chg in sorted(notable, key=lambda x: abs(x[1]), reverse=True):
-            direction = "outperformed" if rel > 0 else "underperformed"
-            lines.append(f"• {short}: {chg:+.2f}% (rel {rel:+.2f}%) → {direction}")
+        lines.append("Moves: " + ", ".join(notable[:2]))
     else:
-        lines.append("• None ≥ 1.3% relative")
-        lines.append("→ Low dispersion day (sectors moved together)")
+        lines.append("Low dispersion")
     lines.append("")
 
-    # === Context & Reading ===
-    lines.append("Context")
-    if abs(nifty_chg) < 0.5 and not notable:
-        lines.append("Quiet / low-conviction day.")
-    elif nifty_chg > 0 and vix_chg < -2:
-        lines.append("Mild rise + falling VIX → fear cooling.")
-    elif nifty_chg < -1:
-        lines.append("Sharp decline day.")
-    else:
-        lines.append("Mixed / normal day.")
-    lines.append("")
+    # Real headlines
+    lines.append("Key drivers")
+    headlines = get_top_headlines(2)
+    for h in headlines:
+        lines.append(f"• {h}")
 
-    # === Investigation Prompt ===
-    lines.append("Investigation")
-    if notable:
-        top = notable[0]
-        lines.append(f"Why did {top[0]} {'outperform' if top[1] > 0 else 'underperform'} so clearly?")
-    else:
-        lines.append("Why was today a low-dispersion day?")
-        lines.append("What is the market waiting for?")
     lines.append("")
-    lines.append("Ask yourself:")
-    lines.append("What happened? → Why? → Who benefits/hurts?")
-    lines.append("Temporary or structural? → What would prove me wrong?")
-    lines.append("")
-    lines.append("Sources: NSE | You form the hypothesis.")
+    lines.append("You form the hypothesis.")
 
     return "\n".join(lines)
 
