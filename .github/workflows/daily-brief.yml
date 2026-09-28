@@ -1,4 +1,6 @@
 name: Daily Money Brief
+permissions:
+  contents: write
 
 on:
   schedule:
