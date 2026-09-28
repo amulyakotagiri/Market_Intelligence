@@ -80,8 +80,16 @@ def get_top_headlines(max_items=2):
                         seen.add(short)
 
                 if len(headlines) >= max_items:
-                    return headadlines
-           except Exception as e: #!/usr/bin/env python3
+                    return headlines
+        except Exception as e:
+            print(f"RSS error ({url}):", e)
+            continue
+
+    if not headlines:
+        headlines = ["No strong market drivers found"]
+    return headlines[:max_items]
+
+def build_brief(indices): #!/usr/bin/env python3
 """
 Money Intelligence System – Daily Brief (Accurate News V1.4)
 Short • Better live headlines • Fits 4x4 widget
@@ -227,14 +235,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-            print(f"RSS error ({url}):", e)
-            continue
-
-    if not headlines:
-        headlines = ["No strong market drivers found"]
-    return headlines[:max_items]
-
-def build_brief(indices):
     today = datetime.now().strftime("%d %b %Y")
     lines = [f"Money Brief | {today}", ""]
 
