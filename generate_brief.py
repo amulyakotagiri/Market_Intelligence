@@ -80,8 +80,8 @@ def get_top_headlines(max_items=2):
                         seen.add(short)
 
                 if len(headlines) >= max_items:
-                    return headlines
-        except Exception as e: #!/usr/bin/env python3
+                    return headadlines
+           except Exception as e: #!/usr/bin/env python3
 """
 Money Intelligence System – Daily Brief (Accurate News V1.4)
 Short • Better live headlines • Fits 4x4 widget
