@@ -1,39 +1,13 @@
 #!/usr/bin/env python3
 """
-Money Intelligence System – Daily Brief (Accurate News V1.4)
-Short • Better live headlines • Fits 4x4 widget
+Money Intelligence System – Daily Brief (Chain Style V1.5)
+Short causal chain • Fits 4x4 widget
 """
 
 from datetime import datetime
 from jugaad_data.nse import NSELive
 import feedparser
 import traceback
-
-SECTORS = {
-    "NIFTY IT": "IT",
-    "NIFTY BANK": "Bank",
-    "NIFTY PHARMA": "Pharma",
-    "NIFTY AUTO": "Auto",
-    "NIFTY FMCG": "FMCG",
-    "NIFTY METAL": "Metal",
-    "NIFTY ENERGY": "Energy",
-    "NIFTY REALTY": "Realty",
-    "NIFTY FINANCIAL SERVICES": "Financials",
-}
-
-REL_THRESHOLD = 1.3
-
-RSS_FEEDS = [
-    "https://www.moneycontrol.com/rss/latestnews.xml",
-    "https://www.moneycontrol.com/rss/marketreports.xml",
-    "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
-]
-
-KEYWORDS = [
-    "crude", "oil", "brent", "yield", "bond", "fii", "fpi", "foreign",
-    "rbi", "rate", "inflation", "geopolitic", "iran", "us-", "trump",
-    "strike", "bank", "nifty", "sensex", "market", "rupee", "dollar"
-]
 
 def safe_float(v, default=0.0):
     try:
@@ -56,67 +30,84 @@ def get_indices(nse):
         print("Index fetch error:", e)
         return {}
 
-def get_top_headlines(max_items=2):
-    headlines = []
-    seen = set()
+def get_market_context():
+    """Simple context from free RSS"""
+    keywords_oil = ["crude", "oil", "brent"]
+    keywords_yield = ["yield", "bond", "treasury"]
+    keywords_fii = ["fii", "fpi", "foreign"]
 
-    for url in RSS_FEEDS:
+    oil_signal = False
+    yield_signal = False
+    fii_signal = False
+
+    feeds = [
+        "https://www.moneycontrol.com/rss/latestnews.xml",
+        "https://www.moneycontrol.com/rss/marketreports.xml",
+    ]
+
+    for url in feeds:
         try:
             feed = feedparser.parse(url)
-            for entry in feed.entries[:12]:
-                title = entry.get("title", "").strip()
-                if not title:
-                    continue
-
-                title_lower = title.lower()
-                if any(k in title_lower for k in KEYWORDS):
-                    short = title[:65] + "..." if len(title) > 65 else title
-                    if short not in seen:
-                        headlines.append(short)
-                        seen.add(short)
-
-                if len(headlines) >= max_items:
-                    return headlines
-        except Exception as e:
-            print(f"RSS error ({url}):", e)
+            for entry in feed.entries[:10]:
+                title = entry.get("title", "").lower()
+                if any(k in title for k in keywords_oil):
+                    oil_signal = True
+                if any(k in title for k in keywords_yield):
+                    yield_signal = True
+                if any(k in title for k in keywords_fii):
+                    fii_signal = True
+        except Exception:
             continue
 
-    if not headlines:
-        headlines = ["No strong market drivers found"]
-    return headlines[:max_items]
+    return oil_signal, yield_signal, fii_signal
 
 def build_brief(indices):
-    today = datetime.now().strftime("%d %b %Y")
+    today = datetime.now().strftime("%d %b")
     lines = [f"Money Brief | {today}", ""]
 
     nifty = indices.get("NIFTY 50", {})
     vix = indices.get("INDIA VIX", {})
     nifty_chg = nifty.get("pchange", 0.0)
     vix_level = vix.get("last", 0.0)
-    vix_chg = vix.get("pchange", 0.0)
 
-    lines.append(f"Nifty {nifty_chg:+.2f}% | VIX {vix_level:.2f} ({vix_chg:+.1f}%)")
-
-    notable = []
-    for full, short in SECTORS.items():
-        sec = indices.get(full)
-        if not sec:
-            continue
-        chg = sec["pchange"]
-        rel = chg - nifty_chg
-        if abs(rel) >= REL_THRESHOLD:
-            notable.append(f"{short} {rel:+.1f}%")
-
-    if notable:
-        lines.append("Moves: " + ", ".join(notable[:2]))
-    else:
-        lines.append("Low dispersion")
+    # Market line
+    vix_status = "elevated" if vix_level > 13.5 else "normal"
+    lines.append(f"Nifty {nifty_chg:+.2f}% | VIX {vix_status}")
     lines.append("")
 
-    lines.append("Key drivers")
-    for h in get_top_headlines(2):
-        lines.append(f"• {h}")
+    # Causal Chain
+    oil_signal, yield_signal, fii_signal = get_market_context()
 
+    lines.append("Chain")
+    if oil_signal or nifty_chg < -1:
+        lines.append("Oil ↑ → Inflation risk ↑")
+    else:
+        lines.append("Oil stable → Inflation calm")
+
+    if yield_signal or nifty_chg < -1:
+        lines.append("Bond yields ↑ → Rate pressure ↑")
+    else:
+        lines.append("Bond yields stable")
+
+    if nifty_chg < -0.5:
+        lines.append("Rupee pressure → Equities ↓")
+    else:
+        lines.append("Currency stable → Equities mixed")
+    lines.append("")
+
+    # Key points
+    lines.append("Key")
+    key_points = []
+    if oil_signal:
+        key_points.append("Crude elevated")
+    if yield_signal:
+        key_points.append("US yields high")
+    if fii_signal or nifty_chg < -1:
+        key_points.append("FII selling")
+    if not key_points:
+        key_points.append("No strong external pressure")
+
+    lines.append(" | ".join(key_points[:3]))
     lines.append("")
     lines.append("You form the hypothesis.")
 
