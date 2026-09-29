@@ -1,11 +1,12 @@
 name: Daily Money Brief
+
 permissions:
   contents: write
 
 on:
   schedule:
-    - cron: '30 3 * * 1-5'   # 09:00 IST on weekdays
-  workflow_dispatch:         # Allow manual run
+    - cron: '0 3 * * 1-5'   # 8:30 AM IST (more reliable)
+  workflow_dispatch:
 
 jobs:
   generate-brief:
